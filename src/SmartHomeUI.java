@@ -17,6 +17,7 @@ class SmartHomeUI extends Ice.Application{
 			int in = 0;
 			try {
 				in = System.in.read();
+				if(in !=10)
 				System.in.read();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -41,6 +42,8 @@ class SmartHomeUI extends Ice.Application{
 			case 69: 
 				System.out.println("About to exit");
 				exit = 1;
+				break;
+			case 10:
 				break;
 			default:
 				System.out.println("Invalid Command");

@@ -1,4 +1,9 @@
+import hManager._hmDisp;
+
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Array;
@@ -24,6 +29,7 @@ class HomeManager extends Ice.Application{
 	static BufferedWriter bw;
 	String home_users = "";
 	mediaPrx media; //proxy to interact with emm
+	int log_lines = 0;
 
 	class SensorsI extends _sensorsDisp {
 
@@ -35,6 +41,7 @@ class HomeManager extends Ice.Application{
 				System.out.println("The current temp is "+temp);
 
 				adjusting = 1;
+				log_lines+=4;
 				try {
 					bw.write("Air-conditioning adjusted.\n"
 							+ "Temperature: at "+temp+" degrees\n"
@@ -51,13 +58,13 @@ class HomeManager extends Ice.Application{
 		public void sayLoc(String loc, String home, Current __current) {
 
 			System.out.println("The current location is "+loc);
-						
+
 			if(adjusting == 1 && counter!=5){
-				
+
 				counter++;
-				
+
 			}else{
-				
+
 				adjusting = 0;
 				counter = 0;
 			}
@@ -129,6 +136,7 @@ class HomeManager extends Ice.Application{
 			if(adjusting == 0 && temp != 22){
 
 				adjusting = 1;
+				log_lines+=4;
 				try {
 					bw.write("Air-conditioning adjusted.\n"
 							+ "Temperature: at "+temp+" degrees\n"
@@ -152,6 +160,85 @@ class HomeManager extends Ice.Application{
 
 	}
 
+	class HmI extends _hmDisp {
+
+		@Override
+		public String[] getLog(Current __current) {
+			String[] result = null;
+			if(log_lines == 0){
+				result = new String[1];
+				result[0] = "Log of temperature adjustment is empty";
+
+			} else {
+				
+				result = new String[log_lines];
+				try {
+					BufferedReader in = new BufferedReader(new FileReader("temp.log"));
+					for(int i = 0; i < log_lines; i++){
+						
+						result[i] = in.readLine();
+						
+					}
+					in.close();
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+
+				
+				
+			}
+			return result;
+		}
+
+		@Override
+		public String[] getMedia(Current __current) {
+			String result[] = null;
+			String fileNames[] = media.getFiles();
+			if(fileNames.length == 0){
+				
+				result = new String[1];
+				result[0] = "No media files were found";
+				
+			} else {
+				
+				result = new String[fileNames.length];
+				for(int i = 0; i < fileNames.length; i++){
+					
+					result[i] = fileNames[i]+", "+media.getTitle(fileNames[i])+", "+media.getDisc(fileNames[i]);
+					
+				}
+				
+				
+			}
+			
+			return result;
+		}
+
+		@Override
+		public String[] getDiscs(String disc, Current __current) {
+			// TODO Auto-generated method stub
+			String result[] = null;
+			String tracks[] = media.getTracks(disc);
+			if(tracks.length == 0){
+				
+				result = new String[1];
+				result[0] = "The disc "+disc+" was not found in the media collection.";
+				
+			} else {
+				
+				result = tracks;
+				
+			}
+			return result;
+		}
+
+
+	}
 	public static void main(String args[]){
 
 		try {
@@ -235,8 +322,8 @@ class HomeManager extends Ice.Application{
 		//code for HomeManager as client to EMM
 		Ice.ObjectPrx emmClient = communicator().stringToProxy("emm_hm:tcp -h localhost -p 7777");
 		media = mediaPrxHelper.uncheckedCast(emmClient);
-		
-		
+
+
 
 
 		java.util.Map<String, String> qos = new java.util.HashMap<String, String>();
