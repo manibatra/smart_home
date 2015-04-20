@@ -10,72 +10,85 @@ import Demo.sensorsPrxHelper;
 
 class Sensor extends Ice.Application{
 
-	static int[] temp_value;
-	static int[] temp_time;
-	static String[] loc_value;
-	static int[] loc_time;
-	static int[] energy_value;
-	static int[] energy_time;
+	static String[] value;
+	static int[] time;
+	
+	static String[] value2;
+	static int[] time2;
+	static String home;
+
+	static int prev_temp = 0;
 
 	
 	static int global_time = 0;
 	static int N;
+	static int M;
 	
 	
 	public static void main(String args[]) throws IOException{
-		LineNumberReader  lnr = new LineNumberReader(new FileReader(new File("temperature.txt")));
+		String type = args[0];
+		String filename = args[1];
+		
+		System.out.println(type);
+		
+		
+		LineNumberReader  lnr = new LineNumberReader(new FileReader(new File(filename)));
 		lnr.skip(Long.MAX_VALUE);
 		N = lnr.getLineNumber();
 		// Finally, the LineNumberReader object should be closed to prevent resource leak
 		lnr.close();
 		
-		BufferedReader in = new BufferedReader(new FileReader("temperature.txt"));
-		temp_value = new int[N];
-		temp_time = new int[N];
+
+		
+		BufferedReader in = new BufferedReader(new FileReader(filename));
+		value = new String[N];
+		time = new int[N];
 		for(int i = 0; i < N; i++){
 			String read = in.readLine();
 			String temp[] = read.split(",");
-			temp_value[i] = Integer.parseInt(temp[0]);
-			temp_time[i] = Integer.parseInt(temp[1]);
+			value[i] = temp[0];
+			time[i] = Integer.parseInt(temp[1]);
 			if(i > 0){
-				temp_time[i] += temp_time[i-1];
+				time[i] +=time[i-1];
 			}
+			
+		}
+		
+		if(type.equalsIgnoreCase("location") && args.length >= 3){
+			
+			filename = args[2];
+			
+			lnr = new LineNumberReader(new FileReader(new File(filename)));
+			lnr.skip(Long.MAX_VALUE);
+			M = lnr.getLineNumber();
+			// Finally, the LineNumberReader object should be closed to prevent resource leak
+			lnr.close();
+			
+			in.close();
+			in = new BufferedReader(new FileReader(filename));
+			value2 = new String[M];
+			time2 = new int[M];
+			for(int i = 0; i < N; i++){
+				String read = in.readLine();
+				String temp[] = read.split(",");
+				value2[i] = temp[0];
+				time2[i] = Integer.parseInt(temp[1]);
+				if(i > 0){
+					time2[i] +=time2[i-1];
+				}
+				
+			}
+			
+			
+			
+			
+			
+			
 			
 		}
 		
 		in.close();
 		
-		in = new BufferedReader(new FileReader("location1.txt"));
-		loc_value = new String[N];
-		loc_time = new int[N];
-		for(int i = 0; i < N; i++){
-			String read = in.readLine();
-			String temp[] = read.split(",");
-			loc_value[i] = temp[0];
-			loc_time[i] = Integer.parseInt(temp[1]);
-			if(i > 0){
-				loc_time[i] += loc_time[i-1];
-			}
-			
-		}
-		
-		in.close();
-		
-		in = new BufferedReader(new FileReader("energy.txt"));
-		energy_value = new int[N];
-		energy_time = new int[N];
-		for(int i = 0; i < N; i++){
-			String read = in.readLine();
-			String temp[] = read.split(",");
-			energy_value[i] = Integer.parseInt(temp[0]);
-			energy_time[i] = Integer.parseInt(temp[1]);
-			if(i > 0){
-				energy_time[i] += energy_time[i-1];
-			}
-			
-		}
-		
-		in.close();
 		
 		
 		Sensor s = new Sensor();
@@ -86,6 +99,7 @@ class Sensor extends Ice.Application{
 	
 	@Override
 	public int run(String[] args) {
+		String type = args[0];
 		
 		IceStorm.TopicManagerPrx topicManager = IceStorm.TopicManagerPrxHelper.checkedCast(
 	            communicator().propertyToProxy("TopicManager.Proxy"));
@@ -97,18 +111,18 @@ class Sensor extends Ice.Application{
         }
 		
 		//topic for publishing temperature
-		IceStorm.TopicPrx temp_topic = null;
-		while(temp_topic == null){
+		IceStorm.TopicPrx topic = null;
+		while(topic == null){
 			
 			try{
 				
-				temp_topic = topicManager.retrieve("Temperature");
+				topic = topicManager.retrieve(type);
 				
 			} catch (IceStorm.NoSuchTopic ex){
 				
 					try{
 						
-						temp_topic = topicManager.create("Temperature");
+						topic = topicManager.create(type);
 						
 					} catch (IceStorm.TopicExists e){
 						
@@ -121,49 +135,117 @@ class Sensor extends Ice.Application{
 			
 		}
 		
-		Ice.ObjectPrx temp_pub = temp_topic.getPublisher().ice_oneway();
+		Ice.ObjectPrx pub = topic.getPublisher().ice_twoway();
 		
-		sensorsPrx temp_sensor = sensorsPrxHelper.uncheckedCast(temp_pub);
+		sensorsPrx sensor = sensorsPrxHelper.uncheckedCast(pub);
 		
-		//topic for publishing everything else i.e. location and energy
-		IceStorm.TopicPrx other_topic = null;
-		while(other_topic == null){
+		IceStorm.TopicPrx ranged_topic = null;
+		
+		sensorsPrx range_sensor = null;
+		
+		if(type.equalsIgnoreCase("temperature")){
 			
-			try{
+			
+			
+			
+			while(ranged_topic == null){
 				
-				other_topic = topicManager.retrieve("Other");
-				
-			} catch (IceStorm.NoSuchTopic ex){
-				
-					try{
-						
-						other_topic = topicManager.create("Other");
-						
-					} catch (IceStorm.TopicExists e){
-						
-						 System.err.println(appName() + ": temporary failure, try again.");
-			             return 1;
-						
+				try{
+					
+					ranged_topic = topicManager.retrieve(type+"Ranged");
+					
+				} catch (IceStorm.NoSuchTopic ex){
+					
+						try{
+							
+							ranged_topic = topicManager.create(type+"Ranged");
+							
+						} catch (IceStorm.TopicExists e){
+							
+							 System.err.println(appName() + ": temporary failure, try again.");
+				             return 1;
+							
+					}
+					
 				}
 				
 			}
 			
+			Ice.ObjectPrx ranged_pub = ranged_topic.getPublisher().ice_twoway();
+			
+		    range_sensor = sensorsPrxHelper.uncheckedCast(ranged_pub);
+			
+			
+			
 		}
 		
-		Ice.ObjectPrx other_pub = other_topic.getPublisher().ice_oneway();
-		
-		sensorsPrx other_sensor = sensorsPrxHelper.uncheckedCast(other_pub);
 		
 		try{
 			
 			while(true){
 				
 				global_time++;
-				int time = getTime();
-				String loc = getLoc();
-				int energy = getEnergy();
-				temp_sensor.sayTime(Integer.toString(time));
-				other_sensor.sayOther(loc, energy);
+				
+				if(type.equalsIgnoreCase("location")){
+					String loc = getValue();
+					String loc2 = "";
+					if(args.length >= 3)
+					  loc2 = getValue2();
+					String final_loc = "";
+					//System.out.println(loc+"  "+loc2);
+					if(loc.equalsIgnoreCase("home") && loc2.equalsIgnoreCase("home")){
+						
+						final_loc = "home";
+						home = args[1].split("\\.")[0] +" and "+ args[2].split("\\.")[0];
+						
+					} else if(loc.equalsIgnoreCase("home")){
+						
+						final_loc = "home";
+						home = args[1].split("\\.")[0];
+						
+					} else if(loc2.equalsIgnoreCase("home")){
+						
+						final_loc = "home";
+						home = args[2].split("\\.")[0];
+						
+					} else {
+						
+						final_loc = "away";
+						home = "";
+						
+					}
+						
+					sensor.sayLoc(final_loc, home);
+					
+				}	
+				
+				if(type.equalsIgnoreCase("energy")){
+					
+					int energy = Integer.parseInt(getValue());
+					sensor.sayEnergy(energy);
+					
+				}
+				
+				if(type.equalsIgnoreCase("temperature")){
+					
+					
+					int temp = Integer.parseInt(getValue());
+					if((temp<15 || temp>28) && prev_temp!=temp){
+						
+						range_sensor.sayTempRanged(temp);
+						
+					}
+					
+					prev_temp = temp;
+
+					
+					sensor.sayTemp(temp);
+					
+					
+				}
+				
+				
+				
 				
 				try
                 {
@@ -190,22 +272,23 @@ class Sensor extends Ice.Application{
 		return 0;
 	}
 
-	private int getEnergy() {
+
+	private String getValue2() {
 		
 		int local_time;
-		if(global_time <= energy_time[N-1])
+		if(global_time <= time2[N-1])
 			local_time = global_time;
 		else
-			local_time= global_time % energy_time[N-1];
+			local_time= global_time % time2[N-1];
 		
 		if(local_time == 0)
-			local_time = energy_time[N-1];
+			local_time = time2[N-1];
 		
 		int index = 0;
 
 		for(int i = 0; i < N; i++){
 			
-			if(local_time <= energy_time[i]){
+			if(local_time <= time2[i]){
 				index = i;
 				break;
 			}	
@@ -213,27 +296,27 @@ class Sensor extends Ice.Application{
 		}
 		
 		
-		return energy_value[index];
+		return value2[index];
 		
 	}
 
-	private String getLoc() {
+	private String getValue() {
 		
 		
 		int local_time;
-		if(global_time <= loc_time[N-1])
+		if(global_time <= time[N-1])
 			local_time = global_time;
 		else
-			local_time= global_time % loc_time[N-1];
+			local_time= global_time % time[N-1];
 		
 		if(local_time == 0)
-			local_time = loc_time[N-1];
+			local_time = time[N-1];
 		
 		int index = 0;
 
 		for(int i = 0; i < N; i++){
 			
-			if(local_time <= loc_time[i]){
+			if(local_time <= time[i]){
 				index = i;
 				break;
 			}	
@@ -241,34 +324,10 @@ class Sensor extends Ice.Application{
 		}
 		
 		
-		return loc_value[index];
+		return value[index];
 	}
 
-	private int getTime() {
-		
-		int local_time;
-		if(global_time <= temp_time[N-1])
-			local_time = global_time;
-		else
-			local_time= global_time % temp_time[N-1];
-		
-		if(local_time == 0)
-			local_time = temp_time[N-1];
-		
-		int index = 0;
 
-		for(int i = 0; i < N; i++){
-			
-			if(local_time <= temp_time[i]){
-				index = i;
-				break;
-			}	
-			
-		}
-		
-		
-		return temp_value[index];
-	}
 	
 	
 	

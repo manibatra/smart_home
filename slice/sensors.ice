@@ -1,8 +1,11 @@
 module Demo{
 interface sensors{
 
-	void sayTime(string temp);
-	void sayOther(string loc, int energy);
+	void sayTemp(int temp);
+	void sayTempRanged(int temp);
+	void sayLoc(string loc, string home);
+	void sayEnergy(int energy);
+	
 	
 };
 };
