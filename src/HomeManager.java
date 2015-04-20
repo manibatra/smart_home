@@ -6,17 +6,17 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.reflect.Array;
-import java.net.ConnectException;
-import java.util.Arrays;
 
 import smartui.uiPrx;
 import smartui.uiPrxHelper;
 import mediamanager.mediaPrx;
 import mediamanager.mediaPrxHelper;
 import Demo._sensorsDisp;
+import Demo.sensorsPrx;
+import Demo.sensorsPrxHelper;
+import Demo.shutdownsensorPrx;
+import Demo.shutdownsensorPrxHelper;
 import Ice.Current;
-import Ice.ObjectAdapter;
 import IceStorm.AlreadySubscribed;
 import IceStorm.BadQoS;
 import IceStorm.TopicExists;
@@ -34,6 +34,7 @@ class HomeManager extends Ice.Application{
 	mediaPrx media; //proxy to interact with emm as a client
 	uiPrx ui; //proxy to interact with UI as a client
 	int log_lines = 0;
+	shutdownsensorPrx shutdownSensor; //to shutdown the sensors
 
 	class SensorsI extends _sensorsDisp {
 
@@ -274,6 +275,15 @@ class HomeManager extends Ice.Application{
 			return result;
 		}
 
+		@Override
+		public void shutDown(Current __current) {
+			
+			media.shutDown();
+			shutdownSensor.shutdown();
+			communicator().shutdown();
+			
+		}
+
 
 	}
 	public static void main(String args[]){
@@ -358,8 +368,34 @@ class HomeManager extends Ice.Application{
 		uiServer.add(new HmI(), communicator().stringToIdentity("hm_ui"));
 		uiServer.activate();
 
+		//code for HomeManager as publisher
+		IceStorm.TopicPrx shutdown_topic = null;
+		while(shutdown_topic == null){
 
+			try{
 
+				shutdown_topic = topicManager.retrieve("shutdown");
+
+			} catch (IceStorm.NoSuchTopic ex){
+
+				try{
+
+					shutdown_topic = topicManager.create("shutdown");
+
+				} catch (IceStorm.TopicExists e){
+
+					System.err.println(appName() + ": temporary failure, try again.");
+					return 1;
+
+				}
+
+			}
+
+		}
+
+		Ice.ObjectPrx pub = shutdown_topic.getPublisher().ice_oneway();
+
+		shutdownSensor = shutdownsensorPrxHelper.uncheckedCast(pub);
 
 
 
@@ -381,9 +417,19 @@ class HomeManager extends Ice.Application{
 		shutdownOnInterrupt();
 
 		communicator().waitForShutdown();
+		try{
 		temp_topic.unsubscribe(proxy);
 		loc_topic.unsubscribe(proxy);
 		energy_topic.unsubscribe(proxy);
+		shutdown_topic.destroy();
+		}
+		catch(Ice.ObjectNotExistException e){
+			
+			//Already destroyed
+			
+		}
+		
+		System.out.println("This got executed");
 		// TODO Auto-generated method stub
 		return 0;
 	}

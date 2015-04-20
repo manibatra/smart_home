@@ -6,7 +6,6 @@ import java.util.Scanner;
 
 import Ice.Current;
 import smartui._uiDisp;
-import mediamanager.mediaPrxHelper;
 
 class SmartHomeUI extends Ice.Application{
 
@@ -95,6 +94,8 @@ class SmartHomeUI extends Ice.Application{
 			
 			case 69: 
 				System.out.println("About to exit");
+				hm.shutDown();
+				communicator().shutdown();
 				exit = 1;
 				break;
 			case 10:

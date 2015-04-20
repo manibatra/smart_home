@@ -9,6 +9,7 @@ interface hm{
 	log getLog();
 	media getMedia();
 	tracks getTracks(string disc);
+	void shutDown();
 	
 	
 };

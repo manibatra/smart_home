@@ -10,5 +10,6 @@ interface media{
 	string getDisc(string fileName);
 	TrackNames getTracks(string discTitle);
 	FileNames getFiles();
+	void shutDown();
 };
 };

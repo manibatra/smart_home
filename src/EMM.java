@@ -93,6 +93,13 @@ class EMM extends Ice.Application{
 			return result;
 		}
 
+		@Override
+		public void shutDown(Current __current) {
+			// TODO Auto-generated method stub
+			communicator().shutdown();
+			
+		}
+
 
 
 
