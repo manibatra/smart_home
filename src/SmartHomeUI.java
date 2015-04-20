@@ -4,10 +4,26 @@ import hManager.hmPrxHelper;
 import java.io.IOException;
 import java.util.Scanner;
 
+import Ice.Current;
+import smartui._uiDisp;
 import mediamanager.mediaPrxHelper;
 
 class SmartHomeUI extends Ice.Application{
 
+	class UiI extends _uiDisp {
+
+		@Override
+		public void sayWarning(double energy, Current __current) {
+			// TODO Auto-generated method stub
+			System.out.println("Energy Usage Warning : Current electricity consumption is "+energy+"kW\n");
+			System.out.println("Please consider the environment before switching on any electrical appliance.\n");
+			
+		}
+		
+		
+	}
+	
+	
 	public static void main(String args[]){
 
 		SmartHomeUI ui = new SmartHomeUI();
@@ -23,6 +39,11 @@ class SmartHomeUI extends Ice.Application{
 		//code for UI as client to HomeManager
 		Ice.ObjectPrx hmClient = communicator().stringToProxy("hm_ui:tcp -h localhost -p 8888");
 		hmPrx hm = hmPrxHelper.uncheckedCast(hmClient);
+		
+		//code for UI as server to HomeMangaer
+		Ice.ObjectAdapter adapter = communicator().createObjectAdapterWithEndpoints("ui_hm", "tcp -h localhost -p 6666");
+		adapter.add(new UiI(), communicator().stringToIdentity("ui_hm"));
+		adapter.activate();
 
 		while(true){
 			System.out.println("Welcome to the Smart Home Monitoring System\n"
@@ -88,6 +109,9 @@ class SmartHomeUI extends Ice.Application{
 				break;
 
 		}
+		
+		communicator().waitForShutdown();
+
 		
 		
 		return 0;

@@ -7,8 +7,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Array;
+import java.net.ConnectException;
 import java.util.Arrays;
 
+import smartui.uiPrx;
+import smartui.uiPrxHelper;
 import mediamanager.mediaPrx;
 import mediamanager.mediaPrxHelper;
 import Demo._sensorsDisp;
@@ -28,7 +31,8 @@ class HomeManager extends Ice.Application{
 	int adjusting = 0;
 	static BufferedWriter bw;
 	String home_users = "";
-	mediaPrx media; //proxy to interact with emm
+	mediaPrx media; //proxy to interact with emm as a client
+	uiPrx ui; //proxy to interact with UI as a client
 	int log_lines = 0;
 
 	class SensorsI extends _sensorsDisp {
@@ -158,7 +162,34 @@ class HomeManager extends Ice.Application{
 
 		@Override
 		public void sayEnergy(int energy, Current __current) {
-			// TODO Auto-generated method stub
+
+			double energyKW = (double)energy/1000;
+			if(energyKW > 4.0){
+
+				if(ui == null){	
+					//code for HomeManager as a client to UI(for energy warning)
+					try{
+						Ice.ObjectPrx uiClient = communicator().stringToProxy("ui_hm:tcp -h localhost -p 6666");
+						ui = uiPrxHelper.uncheckedCast(uiClient);
+					} 
+					catch(Ice.ConnectionRefusedException e){
+
+						//Server has not been started
+
+					}
+					
+				} 
+
+				try{
+					ui.sayWarning(energyKW);
+				}
+				catch(Ice.ConnectionRefusedException e){
+
+					//Server has not been started
+
+				}
+			}
+
 
 		}
 
@@ -176,14 +207,14 @@ class HomeManager extends Ice.Application{
 				result[0] = "Log of temperature adjustment is empty";
 
 			} else {
-				
+
 				result = new String[log_lines];
 				try {
 					BufferedReader in = new BufferedReader(new FileReader("temp.log"));
 					for(int i = 0; i < log_lines; i++){
-						
+
 						result[i] = in.readLine();
-						
+
 					}
 					in.close();
 				} catch (FileNotFoundException e) {
@@ -193,10 +224,10 @@ class HomeManager extends Ice.Application{
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				
 
-				
-				
+
+
+
 			}
 			return result;
 		}
@@ -206,22 +237,22 @@ class HomeManager extends Ice.Application{
 			String result[] = null;
 			String fileNames[] = media.getFiles();
 			if(fileNames.length == 0){
-				
+
 				result = new String[1];
 				result[0] = "No media files were found";
-				
+
 			} else {
-				
+
 				result = new String[fileNames.length];
 				for(int i = 0; i < fileNames.length; i++){
-					
+
 					result[i] = fileNames[i]+", "+media.getTitle(fileNames[i])+", "+media.getDisc(fileNames[i]);
-					
+
 				}
-				
-				
+
+
 			}
-			
+
 			return result;
 		}
 
@@ -231,14 +262,14 @@ class HomeManager extends Ice.Application{
 			String result[] = null;
 			String tracks[] = media.getTracks(disc);
 			if(tracks.length == 0){
-				
+
 				result = new String[1];
 				result[0] = "The disc "+disc+" was not found in the media collection.";
-				
+
 			} else {
-				
+
 				result = tracks;
-				
+
 			}
 			return result;
 		}
@@ -321,11 +352,14 @@ class HomeManager extends Ice.Application{
 		//code for HomeManager as client to EMM
 		Ice.ObjectPrx emmClient = communicator().stringToProxy("emm_hm:tcp -h localhost -p 7777");
 		media = mediaPrxHelper.uncheckedCast(emmClient);
-		
+
 		//code for HomeManager as a server to SmartHomeUi
 		Ice.ObjectAdapter uiServer = communicator().createObjectAdapterWithEndpoints("hm_ui", "tcp -h localhost -p 8888");
 		uiServer.add(new HmI(), communicator().stringToIdentity("hm_ui"));
 		uiServer.activate();
+
+
+
 
 
 
