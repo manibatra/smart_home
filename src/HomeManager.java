@@ -1,7 +1,11 @@
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.Arrays;
 
+import mediamanager.mediaPrx;
+import mediamanager.mediaPrxHelper;
 import Demo._sensorsDisp;
 import Ice.Current;
 import Ice.ObjectAdapter;
@@ -19,6 +23,7 @@ class HomeManager extends Ice.Application{
 	int adjusting = 0;
 	static BufferedWriter bw;
 	String home_users = "";
+	mediaPrx media; //proxy to interact with emm
 
 	class SensorsI extends _sensorsDisp {
 
@@ -46,7 +51,7 @@ class HomeManager extends Ice.Application{
 		public void sayLoc(String loc, String home, Current __current) {
 
 			System.out.println("The current location is "+loc);
-			
+						
 			if(adjusting == 1 && counter!=5){
 				
 				counter++;
@@ -227,7 +232,11 @@ class HomeManager extends Ice.Application{
 
 		adapter.activate();
 
-
+		//code for HomeManager as client to EMM
+		Ice.ObjectPrx emmClient = communicator().stringToProxy("emm_hm:tcp -h localhost -p 7777");
+		media = mediaPrxHelper.uncheckedCast(emmClient);
+		
+		
 
 
 		java.util.Map<String, String> qos = new java.util.HashMap<String, String>();

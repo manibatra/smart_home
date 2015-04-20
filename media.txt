@@ -1,7 +1,7 @@
 filename:track1.mp3 
 title:Two of us
-disc:Let It Be
-track:1
+disc:Stupid
+track:3
 
 filename:track2.mp3
 title:Dig a pony
@@ -10,8 +10,8 @@ track:2
 
 filename:track3.mp3
 title:Across the Universe
-disc:Let It Be
-track:3
+disc:Stupid
+track:1
 
 filename:track4.mp3
 title:I Me Mine
