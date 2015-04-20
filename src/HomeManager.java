@@ -38,14 +38,17 @@ class HomeManager extends Ice.Application{
 
 			if(adjusting == 0 && temp != 22){
 
-				System.out.println("The current temp is "+temp);
+				//System.out.println("The current temp is "+temp);
 
 				adjusting = 1;
 				log_lines+=4;
 				try {
+					FileWriter fw = new FileWriter("temp.log", true);
+					bw = new BufferedWriter(fw);
 					bw.write("Air-conditioning adjusted.\n"
 							+ "Temperature: at "+temp+" degrees\n"
 							+ "At Home:"+home_users+"\n\n");
+					bw.close();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -57,7 +60,7 @@ class HomeManager extends Ice.Application{
 		@Override
 		public void sayLoc(String loc, String home, Current __current) {
 
-			System.out.println("The current location is "+loc);
+			//System.out.println("The current location is "+loc);
 
 			if(adjusting == 1 && counter!=5){
 
@@ -74,7 +77,7 @@ class HomeManager extends Ice.Application{
 			String topic_name = null;
 
 			if(!prev_loc.equalsIgnoreCase(loc)){
-				System.out.println("in here");
+				//System.out.println("in here");
 				if(!prev_loc.equalsIgnoreCase(""))		
 					temp_topic.unsubscribe(proxy);
 
@@ -131,16 +134,19 @@ class HomeManager extends Ice.Application{
 		@Override
 		public void sayTempRanged(int temp, Current __current) {
 			// TODO Auto-generated method stub
-			System.out.println("The temperature is out of range at "+temp+"   "+adjusting);
+			//System.out.println("The temperature is out of range at "+temp+"   "+adjusting);
 
 			if(adjusting == 0 && temp != 22){
 
 				adjusting = 1;
 				log_lines+=4;
 				try {
+					FileWriter fw = new FileWriter("temp.log", true);
+					bw = new BufferedWriter(fw);
 					bw.write("Air-conditioning adjusted.\n"
 							+ "Temperature: at "+temp+" degrees\n"
 							+ "At Home:"+home_users+"\n\n");
+					bw.close();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -220,7 +226,7 @@ class HomeManager extends Ice.Application{
 		}
 
 		@Override
-		public String[] getDiscs(String disc, Current __current) {
+		public String[] getTracks(String disc, Current __current) {
 			// TODO Auto-generated method stub
 			String result[] = null;
 			String tracks[] = media.getTracks(disc);
@@ -241,13 +247,6 @@ class HomeManager extends Ice.Application{
 	}
 	public static void main(String args[]){
 
-		try {
-			FileWriter fw = new FileWriter("temp.log");
-			bw = new BufferedWriter(fw);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 
 		HomeManager hm = new HomeManager();
 		int status = hm.main("Subscriber", args, "config.sub");
@@ -322,6 +321,11 @@ class HomeManager extends Ice.Application{
 		//code for HomeManager as client to EMM
 		Ice.ObjectPrx emmClient = communicator().stringToProxy("emm_hm:tcp -h localhost -p 7777");
 		media = mediaPrxHelper.uncheckedCast(emmClient);
+		
+		//code for HomeManager as a server to SmartHomeUi
+		Ice.ObjectAdapter uiServer = communicator().createObjectAdapterWithEndpoints("hm_ui", "tcp -h localhost -p 8888");
+		uiServer.add(new HmI(), communicator().stringToIdentity("hm_ui"));
+		uiServer.activate();
 
 
 

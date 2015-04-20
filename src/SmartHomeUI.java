@@ -1,10 +1,28 @@
+import hManager.hmPrx;
+import hManager.hmPrxHelper;
+
 import java.io.IOException;
+import java.util.Scanner;
+
+import mediamanager.mediaPrxHelper;
 
 class SmartHomeUI extends Ice.Application{
 
 	public static void main(String args[]){
 
+		SmartHomeUI ui = new SmartHomeUI();
+		int status = ui.main("SmartHomeUI", args);
+		System.exit(status);
+		
+	}
+
+	@Override
+	public int run(String[] args) {
 		int exit = 0;
+		
+		//code for UI as client to HomeManager
+		Ice.ObjectPrx hmClient = communicator().stringToProxy("hm_ui:tcp -h localhost -p 8888");
+		hmPrx hm = hmPrxHelper.uncheckedCast(hmClient);
 
 		while(true){
 			System.out.println("Welcome to the Smart Home Monitoring System\n"
@@ -26,17 +44,32 @@ class SmartHomeUI extends Ice.Application{
 						
 			switch (in) {
 			case 49:
-				System.out.println("view the log");
+				String[] log = hm.getLog();
+				for(int i = 0;  i < log.length; i++){
+					System.out.println(log[i]);
+				}
+				System.out.println();
 				
 				break;
 				
 			case 50: 
-				System.out.println("view the media files");
+				String[] media = hm.getMedia();
+				for(int i = 0; i < media.length; i++){
+					System.out.println(media[i]);
+				}
+				System.out.println();
 
 				break;
 				
 			case 51: 
-				System.out.println("view disc tracks");
+				System.out.println("Please enter the disc title :");
+				Scanner scan=new Scanner(System.in);
+				String disc = scan.nextLine();
+				String tracks[] = hm.getTracks(disc);
+				for(int i = 0; i < tracks.length; i++){
+					System.out.println(tracks[i]);
+				}
+				System.out.println();
 				break;
 			
 			case 69: 
@@ -47,6 +80,7 @@ class SmartHomeUI extends Ice.Application{
 				break;
 			default:
 				System.out.println("Invalid Command");
+				System.out.println();
 				break;
 			}
 			
@@ -55,11 +89,7 @@ class SmartHomeUI extends Ice.Application{
 
 		}
 		
-	}
-
-	@Override
-	public int run(String[] args) {
-		// TODO Auto-generated method stub
+		
 		return 0;
 	}
 

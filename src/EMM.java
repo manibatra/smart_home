@@ -139,7 +139,7 @@ class EMM extends Ice.Application{
 
 	@Override
 	public int run(String[] args) {
-		// TODO Auto-generated method stub
+		// code for establishing emm as the server
 		Ice.ObjectAdapter adapter = communicator().createObjectAdapterWithEndpoints("emm_hm", "tcp -h localhost -p 7777");
 		adapter.add(new MediaI(), communicator().stringToIdentity("emm_hm"));
 		adapter.activate();
